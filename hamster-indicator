@@ -1,0 +1,220 @@
+#!/usr/bin/python
+# - coding: utf-8 -
+
+# Copyright (C) 2014 Nicolas Chachereau <nicolas.chachereau@gmail.com>
+
+# This program is an interface for Project Hamster, and is partly
+# based on its code. See <https://github.com/projecthamster/hamster>.
+
+# Furthermore, it was inspired by Alberto Milone's hamster-appindicator,
+# see <https://github.com/tseliot/hamster-appindicator>.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from gi.repository import AppIndicator3 as appindicator
+from gi.repository import Gtk as gtk
+from gi.repository import GLib as glib
+
+import dbus
+import datetime as dt
+
+from hamster import client
+from hamster.lib import i18n, stuff
+
+# TODO: create schema for preferences
+# TODO: use gsettings to get preferences
+# TODO: create GUI to set preferences
+# TODO: improve code (idées: définir une seule fois les textes)
+# TODO: improve icons
+# TODO: improve labels (e.g. starting time before activity name?)
+# TODO: separate translations from Project Hamster
+# TODO: create installation script
+# TODO: write README
+
+class HamsterIndicator(object):
+
+    def __init__(self):
+        self.storage = client.Storage()
+        self.storage.connect("facts-changed", self.on_facts_changed, None)
+        self._settings = self._get_indicator_settings()
+        self._create_indicator()
+        glib.timeout_add_seconds(60, self.update_activity_info)
+       
+    def _window_service_do(self, method_name):
+        """Call any method from Hamster DBus windows service"""
+        bus = dbus.SessionBus()
+        server = bus.get_object("org.gnome.Hamster.WindowServer",
+                                "/org/gnome/Hamster/WindowServer")
+        getattr(server, method_name)()
+
+    def overview(self):
+        self._window_service_do("overview")
+
+    def add(self):
+        self._window_service_do("edit")
+
+    def stop(self):
+        self.storage.stop_tracking()
+
+    def prefs(self):
+        self._window_service_do("preferences")
+
+    def current(self):
+        """Return current activity text and duration."""
+        if self._facts and not self._facts[-1].end_time:
+            text = self._facts[-1].activity
+            # Calculate duration manually because self._facts[-1].delta
+            # may not have been updated when this is called from a timeout
+            now = dt.datetime.now().replace(microsecond = 0)
+            delta = now - self._facts[-1].start_time
+            duration = stuff.format_duration(delta, human=False)
+            return text, duration
+        else:
+            return _("No activity"), ""
+
+    def update_activity_info(self):
+        # Update icon when activity is ongoing
+        if self._facts:
+            is_active = not self._facts[-1].end_time
+            if is_active:
+                self.indicator.set_status(appindicator.IndicatorStatus.ATTENTION)
+            else:
+                self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
+            self.stop_activity_item.set_sensitive(is_active)
+
+        # Update labels
+        text, duration = self.current()
+        if self._settings["show_description"] and self._settings["show_duration"]:
+            # Provide guidance on how big the label could get
+            guide = "Arrosage de plantes 99:99"
+            label = "%s %s" % (text, duration)
+            self.indicator.set_label(label, guide)
+            self.activity_info_item.hide()
+            self.activity_info_sep.hide()
+        elif self._settings["show_duration"]:
+            guide = "99:99"
+            self.indicator.set_label(duration, guide)
+            self.activity_info_item.set_label(text)
+        elif self._settings["show_description"]:
+            guide = "Arrosage de plantes"
+            self.indicator.set_label(text, guide)
+            label = "%s %s" % (text, duration)
+            self.activity_info_item.set_label(label)
+        else:
+            label = "%s %s" % (text, duration)
+            self.activity_info_item.set_label(label)
+
+        # Make sure not to stop the timeout
+        return True
+    
+
+    def _get_indicator_settings(self):
+        settings = {}
+        settings["change_icon_when_active"] = False
+        settings["show_description"] = False
+        settings["show_duration"] = True
+        return settings
+
+    def _create_indicator(self):
+        self.indicator = appindicator.Indicator.new(
+            "hamster-indicator",
+            "hamster-indicator-inactive",
+            appindicator.IndicatorCategory.APPLICATION_STATUS
+        )
+        self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
+        self._set_icons()
+        
+        menu = gtk.Menu()
+        self.activity_info_item = gtk.MenuItem()
+        self.activity_info_item.set_sensitive(False)
+        menu.append(self.activity_info_item)
+
+        self.activity_info_sep = gtk.SeparatorMenuItem()
+        menu.append(self.activity_info_sep)
+
+        new_activity_item = gtk.MenuItem(_(u"New Activity"))
+        menu.append(new_activity_item)
+        new_activity_item.connect("activate", self.on_new_activity, None)
+
+        self.stop_activity_item = gtk.MenuItem(_(u"Stop tracking"))
+        menu.append(self.stop_activity_item)
+        self.stop_activity_item.connect("activate", self.on_stop_activity, None)
+
+        show_overview_item = gtk.MenuItem(_(u"Show Overview"))
+        menu.append(show_overview_item)
+        show_overview_item.connect("activate", self.on_show_overview, None)
+
+        menu.append(gtk.SeparatorMenuItem())
+
+        tracking_settings_item = gtk.MenuItem(_(u"Tracking Settings"))
+        menu.append(tracking_settings_item)
+        tracking_settings_item.connect("activate", self.on_show_settings, None)
+
+        indicator_options_item = gtk.MenuItem(_(u"Indicator Options"))
+        menu.append(indicator_options_item)
+        indicator_options_item.connect("activate", self.on_show_options, None)
+
+        menu.append(gtk.SeparatorMenuItem())
+ 
+        close_item = gtk.MenuItem(_(u"Close indicator"))
+        menu.append(close_item)
+        close_item.connect("activate", self.on_quit, None)
+
+        menu.show_all()
+        self.indicator.set_menu(menu)
+
+        self.on_facts_changed()
+
+    def _set_icons(self):
+        # Set icons according to settings
+        if self._settings["change_icon_when_active"]:
+            # TODO: this icon needs some love
+            self.indicator.set_attention_icon('hamster-indicator-active')
+        else:
+            # just use the same icon
+            self.indicator.set_attention_icon('hamster-indicator-inactive')
+
+    def on_new_activity(self, *args):
+        self.add()
+
+    def on_stop_activity(self, *args):
+        self.stop()
+
+    def on_show_overview(self, *args):
+        self.overview()
+
+    def on_show_settings(self, *args):
+        self.prefs()
+
+    def on_show_options(self, *args):
+        pass
+
+    def on_quit(self, *args):
+        self.storage.conn.Quit()
+        self._window_service_do("Quit")
+        gtk.main_quit()
+
+    def on_facts_changed(self, *args):
+        self._facts = self.storage.get_todays_facts()
+        self.update_activity_info()
+
+
+if __name__ == "__main__":
+    i18n.setup_i18n()
+    hamster_indicator = HamsterIndicator()
+
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_DFL) # gtk3 screws up ctrl+c
+
+    gtk.main()
