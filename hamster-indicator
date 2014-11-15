@@ -36,8 +36,6 @@ from hamster.lib import i18n, stuff
 
 # TODO: improve code (idées: définir une seule fois les textes)
 # TODO: improve icons
-# TODO: improve labels (e.g. starting time before activity name?)
-# TODO: add access keys
 # TODO: separate translations from Project Hamster
 # TODO: create installation script
 # TODO: write README
@@ -148,15 +146,18 @@ class HamsterIndicator(object):
         self.activity_info_sep = gtk.SeparatorMenuItem()
         menu.append(self.activity_info_sep)
 
-        new_activity_item = gtk.MenuItem(_(u"New Activity…"))
+        new_activity_item = \
+            gtk.MenuItem.new_with_mnemonic(_(u"_New Activity…"))
         menu.append(new_activity_item)
         new_activity_item.connect("activate", self.on_new_activity, None)
 
-        self.stop_activity_item = gtk.MenuItem(_(u"Stop Tracking"))
+        self.stop_activity_item = \
+            gtk.MenuItem.new_with_mnemonic(_(u"_Stop Tracking"))
         menu.append(self.stop_activity_item)
         self.stop_activity_item.connect("activate", self.on_stop_activity, None)
 
-        show_overview_item = gtk.MenuItem(_(u"Show Overview"))
+        show_overview_item = \
+            gtk.MenuItem.new_with_mnemonic(_(u"Show _Overview"))
         menu.append(show_overview_item)
         show_overview_item.connect("activate", self.on_show_overview, None)
 
@@ -194,9 +195,9 @@ class HamsterIndicator(object):
     def _update_quit_menu_item(self):
         if self._get_setting("stop-on-quit") and \
         self._facts[-1] and not self._facts[-1].end_time:
-            self.quit_item.set_label(_(u"Quit and stop tracking"))
+            self.quit_item.set_label(_(u"_Quit and stop tracking"))
         else:
-            self.quit_item.set_label(_(u"Quit"))
+            self.quit_item.set_label(_(u"_Quit"))
 
     def on_new_activity(self, *args):
         self.add()
