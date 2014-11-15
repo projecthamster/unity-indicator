@@ -24,6 +24,7 @@
 
 from gi.repository import AppIndicator3 as appindicator
 from gi.repository import Gtk as gtk
+from gi.repository import Gdk as gdk
 from gi.repository import GLib as glib
 from gi.repository import Gio as gio
 
@@ -33,10 +34,10 @@ import datetime as dt
 from hamster import client
 from hamster.lib import i18n, stuff
 
-# TODO: create GUI to set preferences
 # TODO: improve code (idées: définir une seule fois les textes)
 # TODO: improve icons
 # TODO: improve labels (e.g. starting time before activity name?)
+# TODO: add access keys
 # TODO: separate translations from Project Hamster
 # TODO: create installation script
 # TODO: write README
@@ -147,11 +148,11 @@ class HamsterIndicator(object):
         self.activity_info_sep = gtk.SeparatorMenuItem()
         menu.append(self.activity_info_sep)
 
-        new_activity_item = gtk.MenuItem(_(u"New Activity"))
+        new_activity_item = gtk.MenuItem(_(u"New Activity…"))
         menu.append(new_activity_item)
         new_activity_item.connect("activate", self.on_new_activity, None)
 
-        self.stop_activity_item = gtk.MenuItem(_(u"Stop tracking"))
+        self.stop_activity_item = gtk.MenuItem(_(u"Stop Tracking"))
         menu.append(self.stop_activity_item)
         self.stop_activity_item.connect("activate", self.on_stop_activity, None)
 
@@ -210,7 +211,38 @@ class HamsterIndicator(object):
         self.prefs()
 
     def on_show_options(self, *args):
-        pass
+        window = gtk.Window(type=gtk.WindowType.TOPLEVEL)
+        window.set_title(_(u"Indicator Options"))
+        window.set_icon_name("hamster-time-tracker")
+        window.set_border_width(12)
+        window.set_resizable(False)
+        window.connect_after("destroy", gtk.main_quit)
+        window.connect("key-press-event", self.on_options_key_press)
+        box = gtk.Box(orientation=gtk.Orientation.VERTICAL, spacing=6)
+        window.add(box)
+        options = [
+            ("show-description-on-panel", _(u"Show current _activity")),
+            ("show-duration-on-panel", _(u"Show _duration")),
+            ("change-icon-when-active", _(u"Show different _icon when active")),
+            ("stop-on-quit", _(u"_Stop tracking on indicator close"))
+        ]
+        for setting, label in options:
+            check_button = gtk.CheckButton(label=label, use_underline=True)
+            check_button.get_child().set_line_wrap(True)
+            # important: bind settings to check buttons
+            # (changing one will change the other)
+            self._settings.bind(setting,
+                                check_button,
+                                'active',
+                                gio.SettingsBindFlags.DEFAULT)            
+            box.add(check_button)
+        close_box = gtk.Box(orientation=gtk.Orientation.HORIZONTAL)
+        close_button = gtk.Button(_(u"_Close"), use_underline=True)
+        close_button.connect("clicked", self.on_options_close_button, window)
+        close_box.pack_end(close_button, expand=False, fill=False, padding=0)
+        box.pack_end(close_box, expand=False, fill=False, padding=0)
+        window.show_all()
+        gtk.main()
 
     def on_quit(self, *args):
         if self._get_setting("stop-on-quit"):
@@ -230,6 +262,13 @@ class HamsterIndicator(object):
             self._update_quit_menu_item()
         else:
             self.update_activity_info()
+
+    def on_options_key_press(self, window, event):
+        if event.keyval == gdk.KEY_Escape:
+            window.close()
+
+    def on_options_close_button(self, widget, window):
+        window.close()
 
 
 if __name__ == "__main__":
