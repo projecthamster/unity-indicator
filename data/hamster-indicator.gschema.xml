@@ -18,5 +18,11 @@
       <summary>Show current activity duration</summary>
       <description>If true, the duration of the current activity is displayed in the panel next to the indicator icon</description>
     </key>
+
+    <key name="stop-on-quit" type="b">
+      <default>true</default>
+      <summary>Stop tracking on indicator close</summary>
+      <description>If true, the ongoing activity is stopped when quitting the indicator</description>
+    </key>
   </schema>
 </schemalist>

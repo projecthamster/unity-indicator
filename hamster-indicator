@@ -94,6 +94,7 @@ class HamsterIndicator(object):
             else:
                 self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
             self.stop_activity_item.set_sensitive(is_active)
+            self._update_quit_menu_item()
 
         # Update labels
         text, duration = self.current()
@@ -166,13 +167,14 @@ class HamsterIndicator(object):
 
         menu.append(gtk.SeparatorMenuItem())
  
-        close_item = gtk.MenuItem(_(u"Close indicator"))
-        menu.append(close_item)
-        close_item.connect("activate", self.on_quit, None)
+        self.quit_item = gtk.MenuItem()
+        menu.append(self.quit_item)
+        self.quit_item.connect("activate", self.on_quit, None)
 
         menu.show_all()
         self.indicator.set_menu(menu)
 
+        # Load facts and update interface
         self.on_facts_changed()
 
     def _set_icons(self):
@@ -183,6 +185,13 @@ class HamsterIndicator(object):
         else:
             # just use the same icon
             self.indicator.set_attention_icon('hamster-indicator-inactive')
+    
+    def _update_quit_menu_item(self):
+        if self._get_setting("stop-on-quit") and \
+        self._facts[-1] and not self._facts[-1].end_time:
+            self.quit_item.set_label(_(u"Quit and stop tracking"))
+        else:
+            self.quit_item.set_label(_(u"Quit"))
 
     def on_new_activity(self, *args):
         self.add()
@@ -200,6 +209,8 @@ class HamsterIndicator(object):
         pass
 
     def on_quit(self, *args):
+        if self._get_setting("stop-on-quit"):
+            self.stop()
         self.storage.conn.Quit()
         self._window_service_do("Quit")
         gtk.main_quit()
@@ -211,6 +222,8 @@ class HamsterIndicator(object):
     def on_settings_changed(self, settings, key, data):
         if key == "change-icon-when-active":
             self._set_icons()
+        elif key == "stop-on-quit":
+            self._update_quit_menu_item()
         else:
             self.update_activity_info()
 
