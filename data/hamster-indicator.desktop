@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Type=Application
+Terminal=false
+Name=Time Tracker Indicator
+Comment=Application indicator for hamster time tracker
+Exec=/usr/bin/hamster-indicator
+Icon=hamster-time-tracker
+Categories=Gnome;GTK;Utility;
