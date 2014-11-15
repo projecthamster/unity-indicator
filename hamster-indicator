@@ -110,11 +110,15 @@ class HamsterIndicator(object):
             guide = "99:99"
             self.indicator.set_label(duration, guide)
             self.activity_info_item.set_label(text)
+            self.activity_info_item.show()
+            self.activity_info_sep.show()
         elif self._get_setting("show-description-on-panel"):
             guide = "Arrosage de plantes"
             self.indicator.set_label(text, guide)
             label = "%s %s" % (text, duration)
             self.activity_info_item.set_label(label)
+            self.activity_info_item.show()
+            self.activity_info_sep.show()
         else:
             self.indicator.set_label("", "")
             label = "%s %s" % (text, duration)
@@ -232,7 +236,8 @@ if __name__ == "__main__":
     i18n.setup_i18n()
     hamster_indicator = HamsterIndicator()
 
+    # make Ctrl+C work despite GTK3
     import signal
-    signal.signal(signal.SIGINT, signal.SIG_DFL) # gtk3 screws up ctrl+c
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     gtk.main()
