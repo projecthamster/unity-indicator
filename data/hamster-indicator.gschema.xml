@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.HamsterIndicator" path="/org/gnome/HamsterIndicator/">
+    <key name="change-icon-when-active" type="b">
+      <default>false</default>
+      <summary>Show different icon when active</summary>
+      <description>If true, another indicator icon is displayed when an activity is ongoing</description>
+    </key>
+
+    <key name="show-description-on-panel" type="b">
+      <default>false</default>
+      <summary>Show current activity description</summary>
+      <description>If true, the current activity is displayed in the panel next to the indicator icon</description>
+    </key>
+
+    <key name="show-duration-on-panel" type="b">
+      <default>false</default>
+      <summary>Show current activity duration</summary>
+      <description>If true, the duration of the current activity is displayed in the panel next to the indicator icon</description>
+    </key>
+  </schema>
+</schemalist>

@@ -25,6 +25,7 @@
 from gi.repository import AppIndicator3 as appindicator
 from gi.repository import Gtk as gtk
 from gi.repository import GLib as glib
+from gi.repository import Gio as gio
 
 import dbus
 import datetime as dt
@@ -32,8 +33,6 @@ import datetime as dt
 from hamster import client
 from hamster.lib import i18n, stuff
 
-# TODO: create schema for preferences
-# TODO: use gsettings to get preferences
 # TODO: create GUI to set preferences
 # TODO: improve code (idées: définir une seule fois les textes)
 # TODO: improve icons
@@ -44,10 +43,13 @@ from hamster.lib import i18n, stuff
 
 class HamsterIndicator(object):
 
+    BASE_SETTINGS_KEY = "org.gnome.HamsterIndicator"
+
     def __init__(self):
         self.storage = client.Storage()
         self.storage.connect("facts-changed", self.on_facts_changed, None)
-        self._settings = self._get_indicator_settings()
+        self._settings = gio.Settings(self.BASE_SETTINGS_KEY)
+        self._settings.connect("changed", self.on_settings_changed, None)
         self._create_indicator()
         glib.timeout_add_seconds(60, self.update_activity_info)
        
@@ -95,36 +97,33 @@ class HamsterIndicator(object):
 
         # Update labels
         text, duration = self.current()
-        if self._settings["show_description"] and self._settings["show_duration"]:
+        if self._get_setting("show-description-on-panel") and \
+        self._get_setting("show-duration-on-panel"):
             # Provide guidance on how big the label could get
             guide = "Arrosage de plantes 99:99"
             label = "%s %s" % (text, duration)
             self.indicator.set_label(label, guide)
             self.activity_info_item.hide()
             self.activity_info_sep.hide()
-        elif self._settings["show_duration"]:
+        elif self._get_setting("show-duration-on-panel"):
             guide = "99:99"
             self.indicator.set_label(duration, guide)
             self.activity_info_item.set_label(text)
-        elif self._settings["show_description"]:
+        elif self._get_setting("show-description-on-panel"):
             guide = "Arrosage de plantes"
             self.indicator.set_label(text, guide)
             label = "%s %s" % (text, duration)
             self.activity_info_item.set_label(label)
         else:
+            self.indicator.set_label("", "")
             label = "%s %s" % (text, duration)
             self.activity_info_item.set_label(label)
 
         # Make sure not to stop the timeout
         return True
-    
 
-    def _get_indicator_settings(self):
-        settings = {}
-        settings["change_icon_when_active"] = False
-        settings["show_description"] = False
-        settings["show_duration"] = True
-        return settings
+    def _get_setting(self, key):
+        return self._settings.get_boolean(key)
 
     def _create_indicator(self):
         self.indicator = appindicator.Indicator.new(
@@ -178,7 +177,7 @@ class HamsterIndicator(object):
 
     def _set_icons(self):
         # Set icons according to settings
-        if self._settings["change_icon_when_active"]:
+        if self._get_setting("change-icon-when-active"):
             # TODO: this icon needs some love
             self.indicator.set_attention_icon('hamster-indicator-active')
         else:
@@ -208,6 +207,12 @@ class HamsterIndicator(object):
     def on_facts_changed(self, *args):
         self._facts = self.storage.get_todays_facts()
         self.update_activity_info()
+
+    def on_settings_changed(self, settings, key, data):
+        if key == "change-icon-when-active":
+            self._set_icons()
+        else:
+            self.update_activity_info()
 
 
 if __name__ == "__main__":
