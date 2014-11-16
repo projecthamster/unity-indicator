@@ -34,15 +34,22 @@ import datetime as dt
 from hamster import client
 from hamster.lib import i18n, stuff
 
-# TODO: improve code (idées: définir une seule fois les textes)
 # TODO: improve icons
 # TODO: separate translations from Project Hamster
+# -> also translate .desktop file
 # TODO: create installation script
+# - copy icons
+# - copy .desktop file (also for autostart)
+# - copy and compile gsettings schema
 # TODO: write README
 
 class HamsterIndicator(object):
 
     BASE_SETTINGS_KEY = "org.gnome.HamsterIndicator"
+    # The "label-guide" property does not seem to have any effects.
+    # So let's just always use the same string for all settings.
+    # See also https://bugs.launchpad.net/indicator-application/+bug/1310386
+    INDICATOR_LABEL_GUIDE = "00:00"
 
     def __init__(self):
         self.storage = client.Storage()
@@ -96,32 +103,27 @@ class HamsterIndicator(object):
             self._update_quit_menu_item()
 
         # Update labels
+        show_text = self._get_setting("show-description-on-panel")
+        show_time = self._get_setting("show-duration-on-panel")
+        visible = not (show_text and show_time)
+        self.activity_info_item.set_visible(visible)
+        self.activity_info_sep.set_visible(visible)
+
         text, duration = self.current()
-        if self._get_setting("show-description-on-panel") and \
-        self._get_setting("show-duration-on-panel"):
-            # Provide guidance on how big the label could get
-            guide = "Arrosage de plantes 99:99"
-            label = "%s %s" % (text, duration)
-            self.indicator.set_label(label, guide)
-            self.activity_info_item.hide()
-            self.activity_info_sep.hide()
-        elif self._get_setting("show-duration-on-panel"):
-            guide = "99:99"
-            self.indicator.set_label(duration, guide)
-            self.activity_info_item.set_label(text)
-            self.activity_info_item.show()
-            self.activity_info_sep.show()
-        elif self._get_setting("show-description-on-panel"):
-            guide = "Arrosage de plantes"
-            self.indicator.set_label(text, guide)
-            label = "%s %s" % (text, duration)
-            self.activity_info_item.set_label(label)
-            self.activity_info_item.show()
-            self.activity_info_sep.show()
+        if show_text and show_time:
+            indicator_label = "%s %s" % (text, duration)
+        elif show_time:
+            indicator_label = duration
+        elif show_text:
+            indicator_label = text
         else:
-            self.indicator.set_label("", "")
-            label = "%s %s" % (text, duration)
-            self.activity_info_item.set_label(label)
+            indicator_label = ""
+        self.indicator.set_label(
+            indicator_label,
+            self.INDICATOR_LABEL_GUIDE
+        )
+        menu_label = "%s %s" % (text, duration)
+        self.activity_info_item.set_label(menu_label)
 
         # Make sure not to stop the timeout
         return True
