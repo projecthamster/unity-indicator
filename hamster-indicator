@@ -34,7 +34,6 @@ import datetime as dt
 from hamster import client
 from hamster.lib import i18n, stuff
 
-# TODO: improve icons
 # TODO: separate translations from Project Hamster
 # -> also translate .desktop file
 # TODO: create installation script
