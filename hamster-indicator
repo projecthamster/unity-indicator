@@ -99,7 +99,7 @@ class HamsterIndicator(object):
             else:
                 self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
             self.stop_activity_item.set_sensitive(is_active)
-            self._update_quit_menu_item()
+        self._update_quit_menu_item()
 
         # Update labels
         show_text = self._get_setting("show-description-on-panel")
@@ -194,7 +194,7 @@ class HamsterIndicator(object):
             self.indicator.set_attention_icon('hamster-indicator-inactive')
     
     def _update_quit_menu_item(self):
-        if self._get_setting("stop-on-quit") and \
+        if self._get_setting("stop-on-quit") and self._facts and \
         self._facts[-1] and not self._facts[-1].end_time:
             self.quit_item.set_label(_(u"_Quit and stop tracking"))
         else:
