@@ -16,3 +16,11 @@ Hamster Indicator is an interface for [Project Hamster](http://projecthamster.wo
 - dependencies
 - instructions
 )
+
+## Contributing
+
+1. [Fork](http://help.github.com/forking/) Hamster
+2. Create a topic branch - `git checkout -b my_branch`
+3. Push to your branch - `git push origin my_branch`
+4. Submit a [Pull Request](https://github.com/projecthamster/unity-indicator/pulls) with your branch
+5. That's it!
