@@ -55,6 +55,7 @@ class HamsterIndicator(object):
         self.storage.connect("facts-changed", self.on_facts_changed, None)
         self._settings = gio.Settings(self.BASE_SETTINGS_KEY)
         self._settings.connect("changed", self.on_settings_changed, None)
+        self._recent_activity_items = []
         self._create_indicator()
         glib.timeout_add_seconds(60, self.update_activity_info)
        
@@ -126,6 +127,30 @@ class HamsterIndicator(object):
 
         # Make sure not to stop the timeout
         return True
+
+    def update_recent_activities(self):
+        activities_to_show = self._settings.get_uint("recent-activities-number")
+        for menu_item in self._recent_activity_items:
+            self.menu.remove(menu_item)
+        self._recent_activity_items = []
+        if activities_to_show:
+            activities = self.storage.get_activities()  # activities come sorted
+            # if there is ongoing activity, it will be first one. Skip it
+            if activities and self._facts and not self._facts[-1].end_time:
+                activities = activities[1:]
+            # setup menu items
+            for activity in activities:
+                full_name = activity['name'] + u"@" + activity['category']
+                item = gtk.MenuItem(full_name)
+                self._recent_activity_items.append(item)
+                activities_to_show -= 1
+                if not activities_to_show:
+                    break
+            self._recent_activity_items.append(gtk.SeparatorMenuItem())
+            # add them to menu and make visible
+            for i in reversed(self._recent_activity_items):
+                self.menu.prepend(i)
+                i.show()
 
     def _get_setting(self, key):
         return self._settings.get_boolean(key)
@@ -265,12 +290,15 @@ class HamsterIndicator(object):
     def on_facts_changed(self, *args):
         self._facts = self.storage.get_todays_facts()
         self.update_activity_info()
+        self.update_recent_activities()
 
     def on_settings_changed(self, settings, key, data):
         if key == "change-icon-when-active":
             self._set_icons()
         elif key == "stop-on-quit":
             self._update_quit_menu_item()
+        elif key == "recent-activities-number":
+            self.update_recent_activities()
         else:
             self.update_activity_info()
 
