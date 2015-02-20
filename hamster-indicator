@@ -139,47 +139,47 @@ class HamsterIndicator(object):
         self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
         self._set_icons()
         
-        menu = gtk.Menu()
+        self.menu = gtk.Menu()
         self.activity_info_item = gtk.MenuItem()
         self.activity_info_item.set_sensitive(False)
-        menu.append(self.activity_info_item)
+        self.menu.append(self.activity_info_item)
 
         self.activity_info_sep = gtk.SeparatorMenuItem()
-        menu.append(self.activity_info_sep)
+        self.menu.append(self.activity_info_sep)
 
         new_activity_item = \
             gtk.MenuItem.new_with_mnemonic(_(u"_New Activity…"))
-        menu.append(new_activity_item)
+        self.menu.append(new_activity_item)
         new_activity_item.connect("activate", self.on_new_activity, None)
 
         self.stop_activity_item = \
             gtk.MenuItem.new_with_mnemonic(_(u"_Stop Tracking"))
-        menu.append(self.stop_activity_item)
+        self.menu.append(self.stop_activity_item)
         self.stop_activity_item.connect("activate", self.on_stop_activity, None)
 
         show_overview_item = \
             gtk.MenuItem.new_with_mnemonic(_(u"Show _Overview"))
-        menu.append(show_overview_item)
+        self.menu.append(show_overview_item)
         show_overview_item.connect("activate", self.on_show_overview, None)
 
-        menu.append(gtk.SeparatorMenuItem())
+        self.menu.append(gtk.SeparatorMenuItem())
 
         tracking_settings_item = gtk.MenuItem(_(u"Tracking Settings"))
-        menu.append(tracking_settings_item)
+        self.menu.append(tracking_settings_item)
         tracking_settings_item.connect("activate", self.on_show_settings, None)
 
         indicator_options_item = gtk.MenuItem(_(u"Indicator Options"))
-        menu.append(indicator_options_item)
+        self.menu.append(indicator_options_item)
         indicator_options_item.connect("activate", self.on_show_options, None)
 
-        menu.append(gtk.SeparatorMenuItem())
+        self.menu.append(gtk.SeparatorMenuItem())
  
         self.quit_item = gtk.MenuItem()
-        menu.append(self.quit_item)
+        self.menu.append(self.quit_item)
         self.quit_item.connect("activate", self.on_quit, None)
 
-        menu.show_all()
-        self.indicator.set_menu(menu)
+        self.menu.show_all()
+        self.indicator.set_menu(self.menu)
 
         # Load facts and update interface
         self.on_facts_changed()
