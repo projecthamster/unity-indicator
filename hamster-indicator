@@ -32,7 +32,7 @@ import dbus
 import datetime as dt
 
 from hamster import client
-from hamster.lib import i18n, stuff
+from hamster.lib import i18n, stuff, Fact
 
 # TODO: separate translations from Project Hamster
 # -> also translate .desktop file
@@ -142,6 +142,7 @@ class HamsterIndicator(object):
             for activity in activities:
                 full_name = activity['name'] + u"@" + activity['category']
                 item = gtk.MenuItem(full_name)
+                item.connect("activate", self.on_switch_to_recent, full_name)
                 self._recent_activity_items.append(item)
                 activities_to_show -= 1
                 if not activities_to_show:
@@ -308,6 +309,9 @@ class HamsterIndicator(object):
 
     def on_options_close_button(self, widget, window):
         window.close()
+
+    def on_switch_to_recent(self, *args):
+        self.storage.add_fact(Fact(args[1]))
 
 
 if __name__ == "__main__":
