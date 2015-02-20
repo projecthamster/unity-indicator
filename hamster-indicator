@@ -238,6 +238,15 @@ class HamsterIndicator(object):
                                 'active',
                                 gio.SettingsBindFlags.DEFAULT)            
             box.add(check_button)
+        recent_box = gtk.Box(orientation=gtk.Orientation.HORIZONTAL,  spacing=6)
+        recent_box.add(gtk.Label(label=_(u"Recent activities in menu")))
+        recent_spin_button = gtk.SpinButton()
+        recent_spin_button.set_numeric(True)
+        recent_spin_button.set_adjustment(gtk.Adjustment(0, 0, 99, 1, 10, 0))
+        self._settings.bind('recent-activities-number', recent_spin_button,
+                            'value', gio.SettingsBindFlags.DEFAULT)
+        recent_box.add(recent_spin_button)
+        box.add(recent_box)
         close_box = gtk.Box(orientation=gtk.Orientation.HORIZONTAL)
         close_button = gtk.Button(_(u"_Close"), use_underline=True)
         close_button.connect("clicked", self.on_options_close_button, window)

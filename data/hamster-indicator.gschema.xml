@@ -24,5 +24,11 @@
       <summary>Stop tracking on indicator close</summary>
       <description>If true, the ongoing activity is stopped when quitting the indicator</description>
     </key>
+
+    <key name="recent-activities-number" type="u">
+      <default>0</default>
+      <summary>Number of recent activities in indicator menu</summary>
+      <description>This option allows to switch to recent activities from indicator menu and sets number of such activities shown. If set to zero, this feature will be disabled.</description>
+    </key>
   </schema>
 </schemalist>
