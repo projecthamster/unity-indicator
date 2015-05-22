@@ -32,7 +32,7 @@ import dbus
 import datetime as dt
 
 from hamster import client
-from hamster.lib import i18n, stuff
+from hamster.lib import i18n, stuff, Fact
 
 # TODO: separate translations from Project Hamster
 # -> also translate .desktop file
@@ -55,6 +55,7 @@ class HamsterIndicator(object):
         self.storage.connect("facts-changed", self.on_facts_changed, None)
         self._settings = gio.Settings(self.BASE_SETTINGS_KEY)
         self._settings.connect("changed", self.on_settings_changed, None)
+        self._recent_activity_items = []
         self._create_indicator()
         glib.timeout_add_seconds(60, self.update_activity_info)
        
@@ -127,6 +128,31 @@ class HamsterIndicator(object):
         # Make sure not to stop the timeout
         return True
 
+    def update_recent_activities(self):
+        activities_to_show = self._settings.get_uint("recent-activities-number")
+        for menu_item in self._recent_activity_items:
+            self.menu.remove(menu_item)
+        self._recent_activity_items = []
+        if activities_to_show:
+            activities = self.storage.get_activities()  # activities come sorted
+            # if there is ongoing activity, it will be first one. Skip it
+            if activities and self._facts and not self._facts[-1].end_time:
+                activities = activities[1:]
+            # setup menu items
+            for activity in activities:
+                full_name = activity['name'] + u"@" + activity['category']
+                item = gtk.MenuItem(full_name)
+                item.connect("activate", self.on_switch_to_recent, full_name)
+                self._recent_activity_items.append(item)
+                activities_to_show -= 1
+                if not activities_to_show:
+                    break
+            self._recent_activity_items.append(gtk.SeparatorMenuItem())
+            # add them to menu and make visible
+            for i in reversed(self._recent_activity_items):
+                self.menu.prepend(i)
+                i.show()
+
     def _get_setting(self, key):
         return self._settings.get_boolean(key)
 
@@ -139,47 +165,47 @@ class HamsterIndicator(object):
         self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
         self._set_icons()
         
-        menu = gtk.Menu()
+        self.menu = gtk.Menu()
         self.activity_info_item = gtk.MenuItem()
         self.activity_info_item.set_sensitive(False)
-        menu.append(self.activity_info_item)
+        self.menu.append(self.activity_info_item)
 
         self.activity_info_sep = gtk.SeparatorMenuItem()
-        menu.append(self.activity_info_sep)
+        self.menu.append(self.activity_info_sep)
 
         new_activity_item = \
             gtk.MenuItem.new_with_mnemonic(_(u"_New Activity…"))
-        menu.append(new_activity_item)
+        self.menu.append(new_activity_item)
         new_activity_item.connect("activate", self.on_new_activity, None)
 
         self.stop_activity_item = \
             gtk.MenuItem.new_with_mnemonic(_(u"_Stop Tracking"))
-        menu.append(self.stop_activity_item)
+        self.menu.append(self.stop_activity_item)
         self.stop_activity_item.connect("activate", self.on_stop_activity, None)
 
         show_overview_item = \
             gtk.MenuItem.new_with_mnemonic(_(u"Show _Overview"))
-        menu.append(show_overview_item)
+        self.menu.append(show_overview_item)
         show_overview_item.connect("activate", self.on_show_overview, None)
 
-        menu.append(gtk.SeparatorMenuItem())
+        self.menu.append(gtk.SeparatorMenuItem())
 
         tracking_settings_item = gtk.MenuItem(_(u"Tracking Settings"))
-        menu.append(tracking_settings_item)
+        self.menu.append(tracking_settings_item)
         tracking_settings_item.connect("activate", self.on_show_settings, None)
 
         indicator_options_item = gtk.MenuItem(_(u"Indicator Options"))
-        menu.append(indicator_options_item)
+        self.menu.append(indicator_options_item)
         indicator_options_item.connect("activate", self.on_show_options, None)
 
-        menu.append(gtk.SeparatorMenuItem())
+        self.menu.append(gtk.SeparatorMenuItem())
  
         self.quit_item = gtk.MenuItem()
-        menu.append(self.quit_item)
+        self.menu.append(self.quit_item)
         self.quit_item.connect("activate", self.on_quit, None)
 
-        menu.show_all()
-        self.indicator.set_menu(menu)
+        self.menu.show_all()
+        self.indicator.set_menu(self.menu)
 
         # Load facts and update interface
         self.on_facts_changed()
@@ -238,6 +264,15 @@ class HamsterIndicator(object):
                                 'active',
                                 gio.SettingsBindFlags.DEFAULT)            
             box.add(check_button)
+        recent_box = gtk.Box(orientation=gtk.Orientation.HORIZONTAL,  spacing=6)
+        recent_box.add(gtk.Label(label=_(u"Recent activities in menu")))
+        recent_spin_button = gtk.SpinButton()
+        recent_spin_button.set_numeric(True)
+        recent_spin_button.set_adjustment(gtk.Adjustment(0, 0, 99, 1, 10, 0))
+        self._settings.bind('recent-activities-number', recent_spin_button,
+                            'value', gio.SettingsBindFlags.DEFAULT)
+        recent_box.add(recent_spin_button)
+        box.add(recent_box)
         close_box = gtk.Box(orientation=gtk.Orientation.HORIZONTAL)
         close_button = gtk.Button(_(u"_Close"), use_underline=True)
         close_button.connect("clicked", self.on_options_close_button, window)
@@ -256,12 +291,15 @@ class HamsterIndicator(object):
     def on_facts_changed(self, *args):
         self._facts = self.storage.get_todays_facts()
         self.update_activity_info()
+        self.update_recent_activities()
 
     def on_settings_changed(self, settings, key, data):
         if key == "change-icon-when-active":
             self._set_icons()
         elif key == "stop-on-quit":
             self._update_quit_menu_item()
+        elif key == "recent-activities-number":
+            self.update_recent_activities()
         else:
             self.update_activity_info()
 
@@ -271,6 +309,9 @@ class HamsterIndicator(object):
 
     def on_options_close_button(self, widget, window):
         window.close()
+
+    def on_switch_to_recent(self, *args):
+        self.storage.add_fact(Fact(args[1]))
 
 
 if __name__ == "__main__":
