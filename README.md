@@ -8,14 +8,31 @@ Hamster Indicator is an interface for [Project Hamster](http://projecthamster.wo
 
 ## Features
 
-(screenshot?)
+[![Example screenshot](https://cloud.githubusercontent.com/assets/904912/5063658/79376efc-6def-11e4-9b72-6540db6780a3.png)]
 
 ## Installation
 
-(
+
 - dependencies
-- instructions
-)
+  - Hamster 2.0-rc1
+- get the soucrce
+```sh
+git clone https://github.com/projecthamster/unity-indicator.git```
+cd unity-indicator
+```
+
+```sh
+sudo cp data/hamster-indicator.gschema.xml /usr/share/glib-2.0/schemas/
+sudo glib-compile-schemas /usr/share/glib-2.0/schemas
+sudo cp data/icons/ubuntu-mono-dark/24x24/* /usr/share/icons/ubuntu-mono-dark/apps/24/
+sudo gtk-update-icon-cache /usr/share/icons/ubuntu-mono-dark
+sudo cp hamster-indicator /usr/local/bin/hamster-indicator
+```
+
+- Starting
+
+`hamster-indicator`
+
 
 ## Contributing
 
